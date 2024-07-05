@@ -1,53 +1,55 @@
 version: '3.8'
 
 services:
-  mysql-service:
-    image: mysql:8.4
-    container_name: <valor>
+  postgresql:
+    image: postgres:13
+    container_name: postgres-container
     environment:
-      MYSQL_ROOT_PASSWORD: <valor>
-      MYSQL_DATABASE: <valor>
-      MYSQL_USER: <valor>
-      MYSQL_PASSWORD: <valor>
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+      POSTGRES_DB: sonarqube
     volumes:
-      - <valor>:<valor>
+      - postgresql-data:/var/lib/postgresql/data
     networks:
-      - <valor>
+      - sonarnet
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 20s
-      timeout: 20s
-      retries: 10
-      start_period: 30s
+      test: ["CMD-SHELL", "pg_isready -U sonar"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
-  wordpress-service:
-    image: wordpress:6
-    container_name: <valor>
-    ports:
-      - <valor>:<valor>
+  sonarqube:
+    image: sonarqube:latest
+    container_name: sonarqube-container
     environment:
-      WORDPRESS_DB_HOST: <valor>
-      WORDPRESS_DB_USER: <valor>
-      WORDPRESS_DB_PASSWORD: <valor>
-      WORDPRESS_DB_NAME: <valor>
+      SONARQUBE_JDBC_URL: jdbc:postgresql://postgres-container:5432/sonarqube
+      SONARQUBE_JDBC_USERNAME: sonar
+      SONARQUBE_JDBC_PASSWORD: sonar
+    ports:
+      - "9000:9000"
     volumes:
-      - <valor>:<valor>
+      - sonarqube-conf:/opt/sonarqube/conf
+      - sonarqube-data:/opt/sonarqube/data
+      - sonarqube-logs:/opt/sonarqube/logs
+      - sonarqube-extensions:/opt/sonarqube/extensions
     networks:
-      - <valor>
+      - sonarnet
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost"]
-      interval: 20s
-      timeout: 20s
-      retries: 10
-      start_period: 50s
-    restart: <valor>
+      test: ["CMD-SHELL", "curl -f http://localhost:9000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     depends_on:
-      mysql-service:
-        condition: <valor>
+      postgresql:
+        condition: service_healthy
+
 volumes:
-  mysql-data:
-  wordpress-vol:
+  postgresql-data:
+  sonarqube-conf:
+  sonarqube-data:
+  sonarqube-logs:
+  sonarqube-extensions:
 
 networks:
-  net-wp:
+  sonarnet:
     driver: bridge
